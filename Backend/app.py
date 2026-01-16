@@ -68,8 +68,23 @@ def load_data():
 def load_model():
     global model
     try:
-        model = joblib.load(MODEL_PATH)
-        print("Model loaded successfully")
+        # First try to load from local path
+        if os.path.exists(MODEL_PATH):
+            model = joblib.load(MODEL_PATH)
+            print("Model loaded successfully from local path")
+        # If not found locally, try to download from URL (for Vercel deployment)
+        elif os.getenv('MODEL_URL'):
+            import urllib.request
+            import tempfile
+            print(f"Downloading model from {os.getenv('MODEL_URL')}")
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl') as tmp:
+                urllib.request.urlretrieve(os.getenv('MODEL_URL'), tmp.name)
+                model = joblib.load(tmp.name)
+                os.unlink(tmp.name)  # Clean up temp file
+            print("Model loaded successfully from URL")
+        else:
+            print(f"Warning: Model not found at {MODEL_PATH} and MODEL_URL not set")
+            model = None
     except Exception as e:
         print(f"Error loading model: {e}")
         model = None

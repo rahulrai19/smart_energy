@@ -107,5 +107,35 @@ npm run dev
 
 ---
 
+## 🚀 Deployment on Vercel
+
+### Backend Deployment
+
+The backend is configured for Vercel deployment. Large model and dataset files are excluded from deployment to stay within Vercel's 250 MB serverless function limit.
+
+#### Option 1: Deploy without Model (Limited Functionality)
+The app will work but prediction endpoints will return errors. This is fine for testing or if you don't need ML predictions.
+
+#### Option 2: Deploy with Model via External Storage (Recommended)
+1. **Upload your model to external storage** (e.g., AWS S3, Google Cloud Storage, or any public URL):
+   - Upload `Models/lgb_model_clean.pkl` to your storage service
+   - Make it publicly accessible or use signed URLs
+
+2. **Set Environment Variable in Vercel**:
+   - Go to your Vercel project settings
+   - Add environment variable: `MODEL_URL` with the public URL to your model file
+   - Example: `MODEL_URL=https://your-bucket.s3.amazonaws.com/lgb_model_clean.pkl`
+
+3. **Deploy**:
+   - The app will automatically download the model at startup if `MODEL_URL` is set
+   - Model is cached in memory after first load
+
+#### Important Notes:
+- The `.vercelignore` file excludes `.pkl` and `.csv` files from deployment
+- Dataset files are optional - the app works with empty datasets
+- Make sure your `GEMINI_API_KEY` is set in Vercel environment variables
+
+---
+
 ## 📄 License
 This project is licensed under the MIT License.
