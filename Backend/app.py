@@ -18,7 +18,7 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 # --- Configuration & Global Data ---
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
 DATASET_PATH = os.path.join(os.path.dirname(__file__), 'Dataset', 'Energy_consumption.csv')
-MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'Models', 'lgb_model_clean.pkl')
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'lgb_model_clean.pkl')
 
 df = None
 model = None
@@ -185,14 +185,17 @@ gemini_model = genai.GenerativeModel(
     )
 )
 
+# Global Chat Session (Simple In-Memory History)
+chat_session = gemini_model.start_chat(history=[])
+
 def generate_ai_response(prompt: str) -> str:
     if not GEMINI_API_KEY:
         return "Error: GEMINI_API_KEY not found"
 
     try:
         # 1. First Pass: Check intent & parameters
-        chat = gemini_model.start_chat(history=[])
-        response = chat.send_message(prompt)
+        # Use global session for memory
+        response = chat_session.send_message(prompt)
         text_response = response.text.strip()
 
         # 2. Check for Prediction Command
@@ -211,7 +214,7 @@ def generate_ai_response(prompt: str) -> str:
                     f"The ML model calculated a prediction of {prediction_val:.2f} kWh for the provided parameters: {used_params}. "
                     "Please present this result to the user and give 2 brief efficiency tips based on these conditions."
                 )
-                final_response = chat.send_message(follow_up)
+                final_response = chat_session.send_message(follow_up)
                 return final_response.text.strip()
                 
             except Exception as e:
@@ -368,10 +371,14 @@ def predict_energy():
         prediction, _ = calculate_energy_prediction(data, use_scaling=use_scaling)
         
         # --- Gemini Analysis ---
+        settings = get_settings()
+        sq_ft = settings['energy'].get('squareFootage', 1500)
+        occupants = settings['energy'].get('occupants', 4)
+
         analysis_prompt = (
-            f"Context: Daily energy use is {prediction:.2f} kWh. "
+            f"Context: Daily energy use is {prediction:.2f} kWh for a {sq_ft} sqft home with {occupants} people. "
             f"Temp: {data.get('Temperature')}C. Devices: HVAC {data.get('HVACUsage')}. "
-            f"Give 2 brief tips to save energy."
+            f"Give 2 brief, personalized tips to save energy."
         )
         ai_analysis = generate_ai_response(analysis_prompt)
 
@@ -432,7 +439,8 @@ def predict_batch():
                     "Return ONLY a valid JSON array of objects. "
                     "Each object should try to map to these keys: Timestamp, Temperature, Humidity, SquareFootage, Occupancy, HVACUsage, LightingUsage, RenewableEnergy, Holiday. "
                     "Infer missing columns if possible or omit them. "
-                    "Ensure Timestamp is in ISO format (YYYY-MM-DDTHH:MM:SS)."
+                    "Ensure Timestamp is in ISO format (YYYY-MM-DDTHH:MM:SS). "
+                    "Output must be raw JSON. Do not use markdown code blocks. Do not add any text before or after."
                 )
                 
                 response = gemini_model.generate_content([uploaded_file, prompt])
