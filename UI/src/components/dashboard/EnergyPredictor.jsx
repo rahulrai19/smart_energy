@@ -74,7 +74,7 @@ const Toggle = ({ label, checked, onChange, icon: Icon }) => (
 
 const EnergyPredictor = () => {
     const [activeTab, setActiveTab] = useState('manual');
-    const [useScaling, setUseScaling] = useState(true);
+    const [useScaling, setUseScaling] = useState(false);
     
     // Manual State
     const [formData, setFormData] = useState({

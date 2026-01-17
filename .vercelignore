@@ -1,11 +1,11 @@
 # Exclude large model files
 Models/
-**/*.pkl
+# **/*.pkl
 
 # Exclude large dataset files
-Backend/Dataset/
-Dataset/
-**/*.csv
+# Backend/Dataset/
+# Dataset/
+# **/*.csv
 
 # Exclude other large files
 *.zip

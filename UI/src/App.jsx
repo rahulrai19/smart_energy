@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Assistant from './pages/Assistant';
@@ -8,18 +9,16 @@ import Insights from './pages/Insights';
 import Reports from './pages/Reports';
 import ChatInterface from './components/chat/ChatInterface';
 import Settings from './pages/Settings';
-import { Bot, X } from 'lucide-react';
-
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import { Bot, X, Loader } from 'lucide-react';
 
-function App() {
-    // Auth State - Default to false for demo
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+function AppContent() {
+    const { user, loading, logout } = useAuth();
     const [activePage, setActivePage] = useState('dashboard');
     const [isChatOpen, setIsChatOpen] = useState(false);
-
-    // Theme State
     const [isDarkMode, setIsDarkMode] = useState(true);
+    const [showSignup, setShowSignup] = useState(false);
 
     React.useEffect(() => {
         if (isDarkMode) {
@@ -33,20 +32,8 @@ function App() {
         setIsDarkMode(!isDarkMode);
     };
 
-    const handleLogin = () => {
-        setIsAuthenticated(true);
-    };
-
-    const handleLogout = () => {
-        setIsAuthenticated(false);
-        setActivePage('dashboard'); // Reset page
-    };
-
     const handleNavigate = (page) => {
         setActivePage(page);
-        // On mobile or if floating chat is open, we might want to auto-close it
-        // or keep it open. Fore now, let's keep it open if it was open.
-        // But if navigating TO assistant, we close floating chat because full page opens.
         if (page === 'assistant') {
             setIsChatOpen(false);
         }
@@ -65,15 +52,27 @@ function App() {
         }
     }
 
-    if (!isAuthenticated) {
-        return <Login onLogin={handleLogin} />;
+    if (loading) {
+        return (
+            <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
+                <Loader className="w-8 h-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (!user) {
+        if (showSignup) {
+            return <Signup onNavigateLogin={() => setShowSignup(false)} />;
+        }
+        return <Login onNavigateSignup={() => setShowSignup(true)} />;
     }
 
     return (
         <MainLayout
             activePage={activePage}
             setActivePage={setActivePage}
-            onLogout={handleLogout}
+            onLogout={logout}
+            user={user}
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
         >
@@ -99,6 +98,14 @@ function App() {
                 </button>
             )}
         </MainLayout>
+    );
+}
+
+function App() {
+    return (
+        <AuthProvider>
+            <AppContent />
+        </AuthProvider>
     );
 }
 
