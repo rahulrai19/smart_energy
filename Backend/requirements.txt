@@ -9,3 +9,7 @@ gunicorn
 scikit-learn
 google-generativeai
 openai
+flask-jwt-extended
+flask-bcrypt
+pymongo
+dnspython

@@ -8,12 +8,33 @@ import json
 from datetime import timedelta
 from dotenv import load_dotenv
 import google.generativeai as genai
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_bcrypt import Bcrypt
+from pymongo import MongoClient
 
 load_dotenv()
 
 app = Flask(__name__)
 # Enable CORS for all domains, specifically allowing headers for axios
+# Enable CORS for all domains, specifically allowing headers for axios
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
+# --- Auth & DB Configuration ---
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-this")
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7) # Long for demo
+
+# MongoDB Setup
+MONGO_URI = os.getenv("MONGO_URI")
+if MONGO_URI:
+    mongo_client = MongoClient(MONGO_URI)
+    mongo_db = mongo_client.get_database("smart_energy_db") # Default DB name
+    users_collection = mongo_db.users
+else:
+    print("WARNING: MONGO_URI not set. Auth will fail.")
+    users_collection = None
+
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
 
 # --- Configuration & Global Data ---
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
@@ -592,6 +613,60 @@ def chat_with_ai():
         "role": "assistant",
         "content": response_text
     })
+
+# --- Auth Routes ---
+@app.route('/api/signup', methods=['POST'])
+def signup():
+    if not users_collection:
+        return jsonify({"error": "Database not configured"}), 500
+        
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    name = data.get('name', 'User')
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+        
+    if users_collection.find_one({"email": email}):
+        return jsonify({"error": "User already exists"}), 400
+        
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    new_user = {
+        "email": email,
+        "password": hashed_password,
+        "name": name,
+        "role": "user"
+    }
+    
+    users_collection.insert_one(new_user)
+    
+    return jsonify({"message": "User created successfully"}), 201
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    if not users_collection:
+        return jsonify({"error": "Database not configured"}), 500
+        
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    
+    user = users_collection.find_one({"email": email})
+    
+    if user and bcrypt.check_password_hash(user['password'], password):
+        access_token = create_access_token(identity=str(user['_id']))
+        return jsonify({
+            "message": "Login successful",
+            "access_token": access_token,
+            "user": {
+                "name": user['name'],
+                "email": user['email']
+            }
+        }), 200
+    
+    return jsonify({"error": "Invalid credentials"}), 401
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
