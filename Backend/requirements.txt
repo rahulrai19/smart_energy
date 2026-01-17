@@ -5,5 +5,7 @@ numpy
 lightgbm
 joblib
 python-dotenv
+gunicorn
+scikit-learn
 google-generativeai
 openai
