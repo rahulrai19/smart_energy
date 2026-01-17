@@ -16,8 +16,11 @@ load_dotenv()
 
 app = Flask(__name__)
 # Enable CORS for all domains, specifically allowing headers for axios
-# Enable CORS for all domains, specifically allowing headers for axios
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, resources={r"/*": {
+    "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://smart-energy-o42b.onrender.com", "https://smart-energy-ui.vercel.app"],
+    "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}}, supports_credentials=True)
 
 # --- Auth & DB Configuration ---
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-this")
@@ -617,7 +620,7 @@ def chat_with_ai():
 # --- Auth Routes ---
 @app.route('/api/signup', methods=['POST'])
 def signup():
-    if not users_collection:
+    if users_collection is None:
         return jsonify({"error": "Database not configured"}), 500
         
     data = request.json
@@ -646,7 +649,7 @@ def signup():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    if not users_collection:
+    if users_collection is None:
         return jsonify({"error": "Database not configured"}), 500
         
     data = request.json
