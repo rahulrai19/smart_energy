@@ -17,7 +17,7 @@ load_dotenv()
 app = Flask(__name__)
 # Enable CORS for all domains, specifically allowing headers for axios
 CORS(app, resources={r"/*": {
-    "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://smart-energy-o42b.onrender.com", "https://smart-energy-ui.vercel.app", "https://smart-energy-phi.vercel.app"],
+    "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://smart-energy-o42b.onrender.com", "https://smart-energy-ui.vercel.app", "https://smart-energy-phi.vercel.app", "https://smart-energy-frontend-r553fjox1-rahulrai19s-projects.vercel.app"],
     "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     "allow_headers": ["Content-Type", "Authorization"]
 }}, supports_credentials=True)
