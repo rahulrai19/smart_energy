@@ -8,6 +8,7 @@ const Sidebar = ({ activePage, setActivePage, isCollapsed, setIsCollapsed, onLog
         { id: 'forecast', label: 'Forecast', icon: LineChart },
         { id: 'insights', label: 'Smart Insights', icon: Lightbulb },
         { id: 'reports', label: 'Reports', icon: FileText },
+        { id: 'feedback', label: 'Feedback', icon: MessageSquare },
         { id: 'assistant', label: 'AI Assistant', icon: Bot },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];

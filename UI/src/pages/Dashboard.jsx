@@ -5,7 +5,7 @@ import UsageChart from '../components/dashboard/UsageChart';
 import EnergyPredictor from '../components/dashboard/EnergyPredictor';
 import { getSummary, getDeviceUsage, getChartData } from '../services/api';
 
-const Dashboard = () => {
+const Dashboard = ({ onOpenChat }) => {
     const [summary, setSummary] = useState(null);
     const [deviceData, setDeviceData] = useState([]);
     const [chartData, setChartData] = useState([]);
@@ -190,7 +190,10 @@ const Dashboard = () => {
                                 Analysis of your usage patterns suggests you could save by shifting load.
                             </p>
                         </div>
-                        <button className="px-6 py-2 rounded-xl bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-opacity">
+                        <button 
+                            onClick={onOpenChat}
+                            className="px-6 py-2 rounded-xl bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-opacity"
+                        >
                             Chat with AI
                         </button>
                     </div>

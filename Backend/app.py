@@ -11,6 +11,7 @@ import google.generativeai as genai
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 
 load_dotenv()
 
@@ -31,10 +32,14 @@ MONGO_URI = os.getenv("MONGO_URI")
 if MONGO_URI:
     mongo_client = MongoClient(MONGO_URI)
     mongo_db = mongo_client.get_database("smart_energy_db") # Default DB name
+    mongo_db = mongo_client.get_database("smart_energy_db") # Default DB name
     users_collection = mongo_db.users
+    feedback_collection = mongo_db.feedback
 else:
     print("WARNING: MONGO_URI not set. Auth will fail.")
+    print("WARNING: MONGO_URI not set. Auth will fail.")
     users_collection = None
+    feedback_collection = None
 
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
@@ -202,8 +207,12 @@ gemini_model = genai.GenerativeModel(
         "1) Answer energy-related questions.\n"
         "2) PREDICTION capability: If the user asks to predict/forecast energy and provides specific parameters (like Temperature, Humidity, Area, Occupancy), "
         "DO NOT guess. Instead, output a JSON object prefixed with 'PREDICT_JSON:' containing the parameters. "
-        "Format: PREDICT_JSON: {\"Temperature\": 25, \"Humidity\": 50, \"SquareFootage\": 1500, \"Occupancy\": 2, \"HVACUsage\": \"On\", \"LightingUsage\": \"Off\", \"RenewableEnergy\": 0, \"Holiday\": \"No\"}. "
-        "Use reasonable defaults for missing values (Temp=25, Hum=50, Area=1500, Occ=2, HVAC=On, Light=On). "
+        "Format: PREDICT_JSON: {\"Temperature\": 25, \"Humidity\": 50, \"SquareFootage\": 1500, \"Occupancy\": 2, \"HVACUsage\": \"On\", \"LightingUsage\": \"Off\", \"RenewableEnergy\": 0, \"Holiday\": \"No\", \"Mode\": \"Normal\"}. "
+        "IMPORTANT: You MUST VALIDATE the Mode."
+        "1. If the user explicitly says 'Residential', set Mode='Residential'."
+        "2. If the user explicitly says 'Normal' or 'Industrial', set Mode='Normal'."
+        "3. If the user does NOT specify, ALWAYS default to Mode='Normal', even if the parameters look like a house (e.g. 1500sqft). Do not assume Residential."
+        "Do NOT ask for clarification. Just output the JSON with Mode='Normal' (unless specified)."
         "Wait for the system to provide the calculated value, then explain it.\n"
         "3) If no parameters are provided, give a general advice or ask for inputs."
     )
@@ -230,14 +239,21 @@ def generate_ai_response(prompt: str) -> str:
                 json_str = json_str.replace("```json", "").replace("```", "").strip()
                 params = json.loads(json_str)
                 
+                # Check Mode
+                mode = params.get("Mode", "Normal").lower()
+                use_scaling = True if mode == "residential" else False
+
                 # 3. Run ML Model
-                prediction_val, used_params = calculate_energy_prediction(params, use_scaling=True) # Default to scaling for chat
+                prediction_val, used_params = calculate_energy_prediction(params, use_scaling=use_scaling)
                 
                 # 4. Second Pass: Generate Explanation
                 follow_up = (
-                    f"The ML model calculated a prediction of {prediction_val:.2f} kWh for the provided parameters: {used_params}. "
-                    "Please present this result to the user and give 2 brief efficiency tips based on these conditions."
+                    f"The ML model calculated a prediction of {prediction_val:.2f} kWh ({mode.capitalize()} Mode) for the provided parameters: {used_params}. "
+                    "Please present this result to the user and give 2 brief efficiency tips."
                 )
+                
+                if not use_scaling:
+                    follow_up += " ALSO, ask the user if they would like to see the prediction for Residential Mode instead."
                 final_response = chat_session.send_message(follow_up)
                 return final_response.text.strip()
                 
@@ -670,6 +686,90 @@ def login():
         }), 200
     
     return jsonify({"error": "Invalid credentials"}), 401
+
+@app.route('/api/feedback', methods=['POST'])
+@jwt_required()
+def submit_feedback():
+    if feedback_collection is None:
+        return jsonify({"error": "Database not configured"}), 500
+        
+    current_user_id = get_jwt_identity()
+    user = users_collection.find_one({"_id": ObjectId(current_user_id)}) if users_collection is not None else None
+    
+    data = request.json
+    feedback_type = data.get('type') # 'bug', 'feature', 'query'
+    message = data.get('message')
+    
+    if not message:
+        return jsonify({"error": "Message is required"}), 400
+        
+    feedback_entry = {
+        "user_id": current_user_id,
+        "email": user['email'] if user else "Unknown",
+        "name": user['name'] if user else "Unknown",
+        "type": feedback_type,
+        "message": message,
+        "timestamp": pd.Timestamp.now().isoformat(),
+        "status": "open"
+    }
+    
+    feedback_collection.insert_one(feedback_entry)
+    return jsonify({"message": "Feedback submitted successfully"}), 201
+
+@app.route('/api/feedback', methods=['GET'])
+@jwt_required()
+def get_feedback():
+    if feedback_collection is None:
+        return jsonify({"error": "Database not configured"}), 500
+        
+    current_user_id = get_jwt_identity()
+    user = users_collection.find_one({"_id": ObjectId(current_user_id)})
+    
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+        
+    # Admin Check
+    if user['email'] != 'protocolpsi@gmail.com':
+        return jsonify({"error": "Unauthorized: Admin access required"}), 403
+        
+    # Fetch all feedback
+    feedbacks = list(feedback_collection.find().sort("timestamp", -1))
+    
+    # Convert ObjectId to string for JSON serialization
+    for f in feedbacks:
+        f['_id'] = str(f['_id'])
+        
+    return jsonify(feedbacks), 200
+
+@app.route('/api/feedback/<feedback_id>/status', methods=['PUT'])
+@jwt_required()
+def update_feedback_status(feedback_id):
+    if feedback_collection is None:
+        return jsonify({"error": "Database not configured"}), 500
+        
+    current_user_id = get_jwt_identity()
+    user = users_collection.find_one({"_id": ObjectId(current_user_id)}) if users_collection is not None else None
+    
+    if not user or user['email'] != 'protocolpsi@gmail.com':
+        return jsonify({"error": "Unauthorized: Admin access required"}), 403
+        
+    try:
+        data = request.json
+        new_status = data.get('status')
+        if new_status not in ['open', 'closed']:
+            return jsonify({"error": "Invalid status"}), 400
+            
+        result = feedback_collection.update_one(
+            {"_id": ObjectId(feedback_id)},
+            {"$set": {"status": new_status}}
+        )
+        
+        if result.modified_count == 0:
+            return jsonify({"error": "Feedback not found or status unchanged"}), 404
+            
+        return jsonify({"message": f"Status updated to {new_status}"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

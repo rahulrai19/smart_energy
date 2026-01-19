@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Lightbulb, LineChart, Zap, FileText, Bot, Settings, Bell, User, Sun, Moon, LogOut, ChevronDown, CheckCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { LayoutDashboard, Lightbulb, LineChart, Zap, FileText, Bot, Settings, Bell, User, Sun, Moon, LogOut, ChevronDown, CheckCircle, MessageSquare } from 'lucide-react';
 
 const Navbar = ({ activePage, setActivePage, onLogout, isDarkMode, toggleTheme }) => {
+    const { user } = useAuth();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const profileRef = useRef(null);
 
@@ -11,6 +13,7 @@ const Navbar = ({ activePage, setActivePage, onLogout, isDarkMode, toggleTheme }
         { id: 'forecast', label: 'Forecast', icon: LineChart },
         { id: 'insights', label: 'Insights', icon: Lightbulb },
         { id: 'reports', label: 'Reports', icon: FileText },
+        { id: 'feedback', label: 'Feedback', icon: MessageSquare },
         { id: 'assistant', label: 'Assistant', icon: Bot },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
@@ -25,6 +28,9 @@ const Navbar = ({ activePage, setActivePage, onLogout, isDarkMode, toggleTheme }
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    const isAdmin = user?.email === 'protocolpsi@gmail.com';
+    const userInitials = user?.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
 
     return (
         <nav className="sticky top-0 z-50 w-full glass border-b border-white/10 shadow-sm">
@@ -84,11 +90,11 @@ const Navbar = ({ activePage, setActivePage, onLogout, isDarkMode, toggleTheme }
                             className="flex items-center gap-3 pl-1 group focus:outline-none"
                         >
                             <div className="hidden lg:block text-right">
-                                <p className="text-sm font-medium leading-none group-hover:text-primary transition-colors">Rahul Rai</p>
-                                <p className="text-xs text-muted-foreground">Admin</p>
+                                <p className="text-sm font-medium leading-none group-hover:text-primary transition-colors">{user?.name || 'User'}</p>
+                                {isAdmin && <p className="text-xs text-muted-foreground">Admin</p>}
                             </div>
                             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-sm ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
-                                <span className="text-sm font-bold">RR</span>
+                                <span className="text-sm font-bold">{userInitials}</span>
                             </div>
                             <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
                         </button>
@@ -99,18 +105,20 @@ const Navbar = ({ activePage, setActivePage, onLogout, isDarkMode, toggleTheme }
                                 <div className="p-4 border-b border-border/50">
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground text-lg font-bold">
-                                            RR
+                                            {userInitials}
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-foreground">Rahul Rai</p>
-                                            <p className="text-xs text-muted-foreground">rahul@infosys.com</p>
+                                            <p className="font-semibold text-foreground">{user?.name || 'User'}</p>
+                                            <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
                                         </div>
                                     </div>
-                                    <div className="mt-3 flex items-center gap-2 text-xs font-medium text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md w-fit">
-                                        <CheckCircle className="h-3 w-3" />
-                                        <span>Pro Account Active</span>
-                                    </div>
                                 </div>
+                                    {isAdmin && (
+                                        <div className="mt-3 flex items-center gap-2 text-xs font-medium text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md w-fit">
+                                            <CheckCircle className="h-3 w-3" />
+                                            <span>Admin Access Active</span>
+                                        </div>
+                                    )}
                                 
                                 <div className="p-2 space-y-1">
                                     <button 

@@ -11,6 +11,7 @@ import ChatInterface from './components/chat/ChatInterface';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Feedback from './pages/Feedback';
 import { Bot, X, Loader } from 'lucide-react';
 
 function AppContent() {
@@ -41,11 +42,12 @@ function AppContent() {
 
     const renderPage = () => {
         switch (activePage) {
-            case 'dashboard': return <Dashboard />;
+            case 'dashboard': return <Dashboard onOpenChat={() => setIsChatOpen(true)} />;
             case 'devices': return <Devices />;
             case 'forecast': return <Forecast />;
             case 'insights': return <Insights />;
             case 'reports': return <Reports />;
+            case 'feedback': return <Feedback />;
             case 'assistant': return <Assistant onNavigate={handleNavigate} />;
             case 'settings': return <Settings />;
             default: return <Dashboard />;
@@ -84,6 +86,7 @@ function AppContent() {
                     <ChatInterface
                         className="h-[600px] shadow-2xl border-primary/20"
                         onNavigate={handleNavigate}
+                        onClose={() => setIsChatOpen(false)}
                     />
                 </div>
             )}

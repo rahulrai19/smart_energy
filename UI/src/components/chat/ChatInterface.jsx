@@ -4,7 +4,7 @@ import { chatWithAI } from '../../services/api';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../lib/utils';
 
-const ChatInterface = ({ className, onNavigate }) => {
+const ChatInterface = ({ className, onNavigate, onClose }) => {
     const [messages, setMessages] = useState([
         { role: 'assistant', content: 'Hello! I am your Smart Energy Assistant. How can I help you save energy today?' }
     ]);
@@ -139,7 +139,10 @@ const ChatInterface = ({ className, onNavigate }) => {
                         </div>
                     </div>
                 </div>
-                <button className="text-muted-foreground hover:text-foreground transition-colors">
+                <button 
+                    onClick={onClose}
+                    className="text-muted-foreground hover:text-foreground transition-colors hover:bg-white/5 p-1 rounded-lg"
+                >
                     <X className="h-5 w-5" />
                 </button>
             </div>

@@ -9,6 +9,15 @@ const api = axios.create({
     },
 });
 
+// Add interceptor to include Token
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 export const getSummary = async () => {
     try {
         const response = await api.get('/summary');
@@ -94,6 +103,36 @@ export const batchPredict = async (file, useScaling = true) => {
         return response.data;
     } catch (error) {
         console.error("Batch prediction failed:", error);
+        throw error;
+    }
+};
+
+export const submitFeedback = async (type, message) => {
+    try {
+        const response = await api.post('/feedback', { type, message });
+        return response.data;
+    } catch (error) {
+        console.error("Error submitting feedback:", error);
+        throw error;
+    }
+};
+
+export const getFeedback = async () => {
+    try {
+        const response = await api.get('/feedback');
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching feedback:", error);
+        throw error;
+    }
+};
+
+export const updateFeedbackStatus = async (id, status) => {
+    try {
+        const response = await api.put(`/feedback/${id}/status`, { status });
+        return response.data;
+    } catch (error) {
+        console.error("Error updating feedback status:", error);
         throw error;
     }
 };
