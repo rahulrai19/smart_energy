@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { Zap, Clock, Calendar, Activity, Cpu } from 'lucide-react';
 import KPICard from '../components/dashboard/KPICard';
 import UsageChart from '../components/dashboard/UsageChart';
@@ -6,6 +7,7 @@ import EnergyPredictor from '../components/dashboard/EnergyPredictor';
 import { getSummary, getDeviceUsage, getChartData } from '../services/api';
 
 const Dashboard = ({ onOpenChat }) => {
+    const { user } = useAuth();
     const [summary, setSummary] = useState(null);
     const [deviceData, setDeviceData] = useState([]);
     const [chartData, setChartData] = useState([]);
@@ -59,7 +61,7 @@ const Dashboard = ({ onOpenChat }) => {
                                 System Online
                             </span>
                             <h1 className="text-4xl font-bold tracking-tight text-foreground">
-                                Welcome back, <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">Rahul</span>
+                                Welcome back, <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">{user?.name || 'User'}</span>
                             </h1>
                             <p className="text-muted-foreground max-w-lg text-lg">
                                 Your energy efficiency score is <span className="text-foreground font-semibold">{summary?.efficiency_score || 0}</span> today. 
