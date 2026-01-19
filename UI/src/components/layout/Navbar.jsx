@@ -42,7 +42,7 @@ const Navbar = ({ activePage, setActivePage, onLogout, isDarkMode, toggleTheme }
                         <Zap className="h-5 w-5" />
                     </div>
                     <span className="text-lg font-bold tracking-tight text-foreground hidden sm:block">
-                        SmartEnergy
+                        Smart Energy
                     </span>
                 </div>
 
